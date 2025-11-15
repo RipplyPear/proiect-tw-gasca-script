@@ -1,3 +1,8 @@
+client/node_modules/
+server/node_modules/
+.DS_Store
+*.sqlite
+
 # Logs
 logs
 *.log
@@ -67,6 +72,7 @@ web_modules/
 
 # dotenv environment variable files
 .env
+*.env
 .env.*
 !.env.example
 
@@ -81,6 +87,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist/
 
 # Gatsby files
 .cache/
