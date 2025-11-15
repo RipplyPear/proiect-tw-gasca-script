@@ -1,8 +1,11 @@
-# proiect-tw-gasca-script
-
 # Platformă de conferințe
 
 Platformă web pentru organizarea conferințelor științifice.
+
+## Echipă - GașcaScript
+- Mincinoiu Dragoș-Matei
+- Mircea Ștefăniță-Leonard
+- Mihăilescu Valter-Ioan
 
 ## Tehnologii
 - React + Vite (front-end)
