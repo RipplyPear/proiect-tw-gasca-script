@@ -1,5 +1,6 @@
 // Express Initialisation
 const express = require('express');
+require("./models");
 const cors = require('cors');
 const sequelize = require('./sequelize');
 
@@ -29,14 +30,24 @@ application.use((error, request, response, next) => {
     response.status(500).json({ error: error.message });
 });
 
-/**
- * Sync database and start server.
- */
-sequelize.sync({ alter: true }).then(() => {
-    application.listen(port, () => {
-        console.log(`The server is running on http://localhost:${port}`);
-        console.log('Database synced successfully');
-    });
+// /**
+//  * Sync database and start server.
+//  */
+// sequelize.sync({ alter: true }).then(() => {
+//     application.listen(port, () => {
+//         console.log(`The server is running on http://localhost:${port}`);
+//         console.log('Database synced successfully');
+//     });
+// }).catch(error => {
+//     console.error('Unable to start server:', error);
+// });
+
+// Start server (do not auto-alter schema on SQLite)
+sequelize.authenticate().then(() => {
+  application.listen(port, () => {
+    console.log(`The server is running on http://localhost:${port}`);
+    console.log("DB connection OK (no alter sync on startup)");
+  });
 }).catch(error => {
-    console.error('Unable to start server:', error);
+  console.error("Unable to start server:", error);
 });
