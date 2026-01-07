@@ -1,43 +1,53 @@
-'use strict';
+const sequelize = require('../sequelize');
+const User = require('./User');
+const Conference = require('./Conference');
+const Paper = require('./Paper');
+const Review = require('./Review');
 
-const fs = require('fs');
-const path = require('path');
-const Sequelize = require('sequelize');
-const process = require('process');
-const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
-const config = require(__dirname + '/../config/config.json')[env];
-const db = {};
+// Define entities relationship
+User.hasMany(Conference, { foreignKey: 'organizerId', as: 'organizedConferences' });
+Conference.belongsTo(User, { foreignKey: 'organizerId', as: 'organizer' });
 
-let sequelize;
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
-} else {
-  sequelize = new Sequelize(config.database, config.username, config.password, config);
-}
+User.hasMany(Paper, { foreignKey: 'authorId', as: 'papers' });
+Paper.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
-fs
-  .readdirSync(__dirname)
-  .filter(file => {
-    return (
-      file.indexOf('.') !== 0 &&
-      file !== basename &&
-      file.slice(-3) === '.js' &&
-      file.indexOf('.test.js') === -1
-    );
-  })
-  .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
-    db[model.name] = model;
-  });
+Conference.hasMany(Paper, { foreignKey: 'conferenceId', as: 'papers' });
+Paper.belongsTo(Conference, { foreignKey: 'conferenceId', as: 'conference' });
 
-Object.keys(db).forEach(modelName => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
+Paper.hasMany(Review, { foreignKey: 'paperId', as: 'reviews' });
+Review.belongsTo(Paper, { foreignKey: 'paperId', as: 'paper' });
+
+User.hasMany(Review, { foreignKey: 'reviewerId', as: 'reviews' });
+Review.belongsTo(User, { foreignKey: 'reviewerId', as: 'reviewer' });
+
+// Many-to-many relationship for Conference-Reviewers
+const ConferenceReviewer = sequelize.define('ConferenceReviewer', {
+    conferenceId: {
+        type: require('sequelize').DataTypes.INTEGER,
+        references: {
+            model: 'Conferences',
+            key: 'id'
+        }
+    },
+    reviewerId: {
+        type: require('sequelize').DataTypes.INTEGER,
+        references: {
+            model: 'Users',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'ConferenceReviewers'
 });
 
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+Conference.belongsToMany(User, { through: ConferenceReviewer, foreignKey: 'conferenceId', as: 'reviewers' });
+User.belongsToMany(Conference, { through: ConferenceReviewer, foreignKey: 'reviewerId', as: 'reviewingConferences' });
 
-module.exports = db;
+module.exports = {
+    sequelize,
+    User,
+    Conference,
+    Paper,
+    Review,
+    ConferenceReviewer
+};
