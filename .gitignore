@@ -152,3 +152,11 @@ vite.config.ts.timestamp-*
 
 # Test results
 test-results.md
+
+# SQLite (local dev DB)
+server/*.sqlite
+server/*.sqlite-wal
+server/*.sqlite-shm
+
+# Optional: seed logs
+server/seed_output.txt
