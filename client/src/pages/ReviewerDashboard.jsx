@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+//import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import StatusBanner from "../components/StatusBanner";
+import { getErrorMessage } from "../utils/http";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUser } from "../services/auth";
 import { UsersAPI } from "../services/users";
@@ -7,6 +10,12 @@ import { PapersAPI } from "../services/papers";
 export default function ReviewerDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
+  const [banner, setBanner] = useState({ type: "info", message: "" });
+  const clearBanner = () => setBanner({ type: "info", message: "" });
+  const showSuccess = (message) => setBanner({ type: "success", message });
+  const showError = (err, fallback) =>
+    setBanner({ type: "error", message: getErrorMessage(err, fallback) });
+
 
   const [selectedPaperId, setSelectedPaperId] = useState(null);
 
@@ -29,10 +38,12 @@ export default function ReviewerDashboard() {
       if (selectedPaperId) {
         await qc.invalidateQueries({ queryKey: ["paper", selectedPaperId] });
       }
-      alert("Review trimis.");
+      //alert("Review trimis.");
+      showSuccess("Review trimis.");
     },
     onError: (e) => {
-      alert(e?.response?.data?.message || "Eroare la trimiterea review-ului.");
+      //alert(e?.response?.data?.message || "Eroare la trimiterea review-ului.");
+      showError(e, "Eroare la trimiterea review-ului.");
     },
   });
 
@@ -49,6 +60,7 @@ export default function ReviewerDashboard() {
   return (
     <div>
       <h2>Reviewer dashboard</h2>
+      <StatusBanner type={banner.type} message={banner.message} onClose={clearBanner} />
 
       {papersQuery.isLoading && <p>Loading...</p>}
       {papersQuery.error && <p style={{ color: "crimson" }}>Eroare la încărcare.</p>}
@@ -86,6 +98,7 @@ export default function ReviewerDashboard() {
           {selectedPaperId && paperDetailsQuery.data && (
             <PaperReviewPanel
               paper={paperDetailsQuery.data}
+              reviewerId={user.id}
               onSubmit={(verdict, comments) =>
                 reviewMutation.mutate({ paperId: selectedPaperId, verdict, comments })
               }
@@ -98,9 +111,22 @@ export default function ReviewerDashboard() {
   );
 }
 
-function PaperReviewPanel({ paper, onSubmit, submitting }) {
+//function PaperReviewPanel({ paper, onSubmit, submitting }) {
+function PaperReviewPanel({ paper, reviewerId, onSubmit, submitting }) {
   const [verdict, setVerdict] = useState("approved");
   const [comments, setComments] = useState("");
+
+  useEffect(() => {
+    const reviews = Array.isArray(paper?.reviews) ? paper.reviews : [];
+    const mine = reviews.find((r) => r.reviewerId === reviewerId);
+    if (mine) {
+      setVerdict(mine.verdict || "approved");
+      setComments(mine.comments || "");
+    } else {
+      setVerdict("approved");
+      setComments("");
+    }
+  }, [paper?.id, reviewerId]);
 
   return (
     <div style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8 }}>
@@ -135,13 +161,17 @@ function PaperReviewPanel({ paper, onSubmit, submitting }) {
         </button>
       </div>
 
-      {Array.isArray(paper.Reviews) && (
+      {/* {Array.isArray(paper.Reviews) && ( */}
+      {Array.isArray(paper.reviews) && (
         <>
           <h4 style={{ marginTop: 16 }}>Reviews existente</h4>
           <ul>
-            {paper.Reviews.map((r) => (
+            {/* {paper.Reviews.map((r) => ( */}
+            {paper.reviews.map((r) => (
               <li key={r.id}>
-                reviewerId={r.reviewerId} — verdict={r.verdict || "(pending)"} — {r.comments || ""}
+                {/* reviewerId={r.reviewerId} — verdict={r.verdict || "(pending)"} — {r.comments || ""} */}
+                <strong>{r.reviewer?.name || `reviewerId=${r.reviewerId}`}</strong>
+                {" — "} verdict={r.verdict || "(pending)"} — {r.comments || ""}
               </li>
             ))}
           </ul>

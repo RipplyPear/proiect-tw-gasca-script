@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+//import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import StatusBanner from "../components/StatusBanner";
+import { getErrorMessage } from "../utils/http";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUser } from "../services/auth";
 import { PapersAPI } from "../services/papers";
@@ -7,6 +10,43 @@ import { ConferencesAPI } from "../services/conferences";
 export default function AuthorDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
+  const [banner, setBanner] = useState({ type: "info", message: "" });
+  const clearBanner = () => setBanner({ type: "info", message: "" });
+  const showSuccess = (message) => setBanner({ type: "success", message });
+  const showError = (err, fallback) =>
+  setBanner({ type: "error", message: getErrorMessage(err, fallback) });
+
+  // ---- state (submit form)
+  const [conferenceId, setConferenceId] = useState(""); // useState(() => (conferences[0]?.id ? String(conferences[0].id) : ""));
+  const [title, setTitle] = useState("My Paper Title");
+  const [abstract, setAbstract] = useState("Short abstract...");
+  const [currentVersionLink, setCurrentVersionLink] = useState("v1.pdf");
+
+  const [registeredConferenceIds, setRegisteredConferenceIds] = useState(() => new Set());
+
+  const isRegisteredHere = conferenceId
+    ? registeredConferenceIds.has(Number(conferenceId))
+    : false;
+
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      clearBanner();
+      if (!conferenceId) throw new Error("Selectează o conferință.");
+      //return ConferencesAPI.registerAuthor(Number(conferenceId), user.id);
+      if (!user?.id) throw new Error("Nu ești autentificat.");
+      return ConferencesAPI.registerAuthor(Number(conferenceId), user.id);
+    },
+    onSuccess: async () => {
+      setRegisteredConferenceIds((prev) => {
+        const next = new Set(prev);
+        next.add(Number(conferenceId));
+        return next;
+      });
+      showSuccess("Autor înregistrat la conferință (demo).");
+    },
+    onError: (e) => showError(e, "Eroare la înregistrarea autorului."),
+  });
+
 
   // ---- queries
   const conferencesQuery = useQuery({
@@ -24,17 +64,20 @@ export default function AuthorDashboard() {
   const allPapers = Array.isArray(papersQuery.data) ? papersQuery.data : [];
   const myPapers = useMemo(() => allPapers.filter((p) => p.authorId === user?.id), [allPapers, user]);
 
-  // ---- state (submit form)
-  const [conferenceId, setConferenceId] = useState(() => (conferences[0]?.id ? String(conferences[0].id) : ""));
-  const [title, setTitle] = useState("My Paper Title");
-  const [abstract, setAbstract] = useState("Short abstract...");
-  const [currentVersionLink, setCurrentVersionLink] = useState("v1.pdf");
 
-  // when conferences load, default conferenceId if empty
-  if (!conferenceId && conferences.length > 0) {
-    // safe: set state only if it's empty
-    setTimeout(() => setConferenceId(String(conferences[0].id)), 0);
-  }
+
+  // // when conferences load, default conferenceId if empty
+  // if (!conferenceId && conferences.length > 0) {
+  //   // safe: set state only if it's empty
+  //   setTimeout(() => setConferenceId(String(conferences[0].id)), 0);
+  // }
+
+// when conferences load, default conferenceId if empty
+  useEffect(() => {
+    if (!conferenceId && conferences.length > 0) {
+      setConferenceId(String(conferences[0].id));
+    }
+  }, [conferenceId, conferences]);
 
   const submitMutation = useMutation({
     mutationFn: () =>
@@ -47,10 +90,12 @@ export default function AuthorDashboard() {
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["papers"] });
-      alert("Articol trimis. Reviewerii au fost alocați automat.");
+      // alert("Articol trimis. Reviewerii au fost alocați automat.");
+      showSuccess("Articol trimis. Reviewerii au fost alocați automat.");
     },
     onError: (e) => {
-      alert(e?.response?.data?.message || "Eroare la trimiterea articolului.");
+      // alert(e?.response?.data?.message || "Eroare la trimiterea articolului.");
+      showError(e, "Eroare la trimiterea articolului.");
     },
   });
 
@@ -70,10 +115,12 @@ export default function AuthorDashboard() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["papers"] });
       await qc.invalidateQueries({ queryKey: ["paper", selectedPaperId] });
-      alert("Versiune nouă încărcată. Status resetat la IN_REVIEW.");
+      //alert("Versiune nouă încărcată. Status resetat la IN_REVIEW.");
+      showSuccess("Versiune nouă încărcată. Status resetat la IN_REVIEW.");
     },
     onError: (e) => {
-      alert(e?.response?.data?.message || "Eroare la încărcarea versiunii.");
+      //alert(e?.response?.data?.message || "Eroare la încărcarea versiunii.");
+      showError(e, "Eroare la încărcarea versiunii.");
     },
   });
 
@@ -81,6 +128,8 @@ export default function AuthorDashboard() {
 
   return (
     <div>
+      <StatusBanner type={banner.type} message={banner.message} onClose={clearBanner} />
+
       <h2>Author dashboard</h2>
 
       <section style={sectionStyle}>
@@ -89,10 +138,29 @@ export default function AuthorDashboard() {
         {conferencesQuery.isLoading && <p>Loading conferences...</p>}
         {conferencesQuery.error && <p style={{ color: "crimson" }}>Eroare la încărcare conferințe.</p>}
 
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => registerMutation.mutate()}
+            disabled={!conferenceId || registerMutation.isPending || isRegisteredHere}
+          >
+            {isRegisteredHere
+              ? "Registered"
+              : registerMutation.isPending
+              ? "Registering..."
+              : "Register to conference"}
+          </button>
+
+          <small>
+            Cerință: autorul se înregistrează la conferință înainte de trimiterea articolului.
+          </small>
+        </div>
+
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!conferenceId) return alert("Selectează o conferință.");
+            if (!conferenceId) return showError(null, "Selectează o conferință.");
             submitMutation.mutate();
           }}
           style={{ display: "grid", gap: 10, maxWidth: 520 }}
@@ -198,7 +266,7 @@ function AuthorPaperDetails({ paper, newVersionLink, setNewVersionLink, onUpload
         <strong>Current version:</strong> {paper.currentVersionLink}
       </p>
 
-      {Array.isArray(paper.versionHistory) && paper.versionHistory.length > 0 && (
+      {/* {Array.isArray(paper.versionHistory) && paper.versionHistory.length > 0 && (
         <>
           <p>
             <strong>Version history:</strong>
@@ -207,6 +275,32 @@ function AuthorPaperDetails({ paper, newVersionLink, setNewVersionLink, onUpload
             {paper.versionHistory.map((v, idx) => (
               <li key={`${v}-${idx}`}>{v}</li>
             ))}
+          </ul>
+        </>
+      )} */}
+
+      {Array.isArray(paper.versionHistory) && paper.versionHistory.length > 0 && (
+        <>
+          <p>
+            <strong>Version history:</strong>
+          </p>
+          <ul>
+            {paper.versionHistory.map((vh, idx) => {
+              // dacă backend-ul/DB-ul ar întoarce cândva string-uri
+              if (typeof vh === "string") {
+                return <li key={`${vh}-${idx}`}>{vh}</li>;
+              }
+
+              const ver = vh?.version ?? idx + 1;
+              const link = vh?.link ?? "(no link)";
+              const dateLabel = vh?.date ? new Date(vh.date).toLocaleString() : "";
+
+              return (
+                <li key={`v${ver}-${idx}`}>
+                  <strong>v{ver}</strong>: {link} {dateLabel ? `— ${dateLabel}` : ""}
+                </li>
+              );
+            })}
           </ul>
         </>
       )}
@@ -223,11 +317,11 @@ function AuthorPaperDetails({ paper, newVersionLink, setNewVersionLink, onUpload
         </button>
       </div>
 
-      {Array.isArray(paper.Reviews) && (
+      {Array.isArray(paper.reviews) && (
         <>
           <h4 style={{ marginTop: 16 }}>Reviews</h4>
           <ul>
-            {paper.Reviews.map((r) => (
+            {paper.reviews.map((r) => (
               <li key={r.id}>
                 reviewerId={r.reviewerId} — verdict={r.verdict || "(pending)"} — {r.comments || ""}
               </li>
