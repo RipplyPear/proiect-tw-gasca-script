@@ -29,7 +29,7 @@ npm run dev
 ### Back-end
 cd server  
 npm install  
-npx sequelize-cli db:migrate  
+node seed.js
 node index.js
 
 ## Branching
