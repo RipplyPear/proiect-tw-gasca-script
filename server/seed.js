@@ -7,7 +7,7 @@ async function seed() {
 
         // Șterge toate datele existente
         await sequelize.sync({ force: true });
-        console.log('✓ Baza de date resetată\n');
+        console.log('[OK] Baza de date resetata\n');
 
         // 1. Creează utilizatori
         console.log('1. Creez utilizatori...');
@@ -47,7 +47,7 @@ async function seed() {
             role: 'author'
         });
 
-        console.log('✓ Utilizatori creați:', {
+        console.log('[OK] Utilizatori creati:', {
             admin: admin.id,
             organizer: organizer.id,
             reviewers: [reviewer1.id, reviewer2.id, reviewer3.id],
@@ -63,13 +63,13 @@ async function seed() {
             date: '2024-06-15',
             organizerId: organizer.id
         });
-        console.log('✓ Conferință creată:', conference.id);
+        console.log('[OK] Conferinta creata:', conference.id);
         console.log('');
 
         // 3. Alocă revieweri la conferință
         console.log('3. Aloc revieweri la conferință...');
         await conference.addReviewers([reviewer1, reviewer2, reviewer3]);
-        console.log('✓ Revieweri alocați');
+        console.log('[OK] Revieweri alocati');
         console.log('');
 
         // 4. Creează articol 1
@@ -103,7 +103,7 @@ async function seed() {
         });
 
         await paper1.update({ status: 'IN_REVIEW' });
-        console.log('✓ Articol 1 creat cu 2 revieweri alocați');
+        console.log('[OK] Articol 1 creat cu 2 revieweri alocati');
         console.log('');
 
         // 5. Creează articol 2
@@ -136,7 +136,7 @@ async function seed() {
         });
 
         await paper2.update({ status: 'IN_REVIEW' });
-        console.log('✓ Articol 2 creat cu 2 revieweri alocați');
+        console.log('[OK] Articol 2 creat cu 2 revieweri alocati');
         console.log('');
 
         // 6. Adaugă reviews
@@ -159,7 +159,7 @@ async function seed() {
 
         // Update paper status
         await paper1.update({ status: 'NEEDS_REVISIONS' });
-        console.log('✓ Reviews adăugate, status articol: NEEDS_REVISIONS');
+        console.log('[OK] Reviews adaugate, status articol: NEEDS_REVISIONS');
         console.log('');
 
         // 7. Adaugă versiune nouă
@@ -175,7 +175,7 @@ async function seed() {
             versionHistory: history,
             status: 'IN_REVIEW'
         });
-        console.log('✓ Versiune nouă adăugată, status resetat la IN_REVIEW');
+        console.log('[OK] Versiune noua adaugata, status resetat la IN_REVIEW');
         console.log('');
 
         // Afișează rezumat
@@ -185,10 +185,10 @@ async function seed() {
         const papers = await Paper.findAll();
         const reviews = await Review.findAll();
 
-        console.log(`✓ ${users.length} utilizatori`);
-        console.log(`✓ ${conferences.length} conferințe`);
-        console.log(`✓ ${papers.length} articole`);
-        console.log(`✓ ${reviews.length} reviews`);
+        console.log(`[OK] ${users.length} utilizatori`);
+        console.log(`[OK] ${conferences.length} conferinte`);
+        console.log(`[OK] ${papers.length} articole`);
+        console.log(`[OK] ${reviews.length} reviews`);
         console.log('');
         console.log('=== GATA! Baza de date populată cu succes! ===');
         console.log('Server: http://localhost:3000');

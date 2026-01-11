@@ -26,28 +26,16 @@ application.use('/api/reviews', reviewsRoutes);
 
 // Create a middleware to handle 500 status errors
 application.use((error, request, response, next) => {
-    console.error(`[ERROR]: ${error}`);
-    response.status(500).json({ error: error.message });
+  console.error(`[ERROR]: ${error}`);
+  response.status(500).json({ error: error.message });
 });
 
-// /**
-//  * Sync database and start server.
-//  */
-// sequelize.sync({ alter: true }).then(() => {
-//     application.listen(port, () => {
-//         console.log(`The server is running on http://localhost:${port}`);
-//         console.log('Database synced successfully');
-//     });
-// }).catch(error => {
-//     console.error('Unable to start server:', error);
-// });
-
-// Start server (do not auto-alter schema on SQLite)
+// Start server (tables are created by seed.js)
 sequelize.authenticate().then(() => {
   application.listen(port, () => {
     console.log(`The server is running on http://localhost:${port}`);
-    console.log("DB connection OK (no alter sync on startup)");
+    console.log('DB connection OK');
   });
 }).catch(error => {
-  console.error("Unable to start server:", error);
+  console.error('Unable to start server:', error);
 });
