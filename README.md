@@ -29,7 +29,7 @@ npm run dev
 ### Back-end
 cd server  
 npm install  
-node
+node seed.js
 node index.js
 
 ## Branching
