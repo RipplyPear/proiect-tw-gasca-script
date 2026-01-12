@@ -1,11 +1,9 @@
-// Routes for papers
+// Rutele pentru articole
 const express = require('express');
 const router = express.Router();
 const { User, Conference, Paper, Review } = require('../models');
 
-/**
- * GET all papers from the database.
- */
+// Ia toate articolele cu autor si conferinta
 router.get('/', async (request, response, next) => {
     try {
         const papers = await Paper.findAll({
@@ -24,9 +22,7 @@ router.get('/', async (request, response, next) => {
     }
 });
 
-/**
- * GET a specific paper by id.
- */
+// Ia un articol dupa ID cu toate detaliile
 router.get('/:id', async (request, response, next) => {
     try {
         const paper = await Paper.findByPk(request.params.id, {
@@ -50,14 +46,13 @@ router.get('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * POST a new paper to the database.
- * Automatically allocates 2 random reviewers from the conference.
- */
+// Trimite un articol nou
+// Aloca automat 2 revieweri random din conferinta
 router.post('/', async (request, response, next) => {
     try {
         const { conferenceId, authorId } = request.body;
 
+        // Verificam conferinta si luam reviewerii
         const conference = await Conference.findByPk(conferenceId, {
             include: [{ model: User, as: 'reviewers' }]
         });
@@ -66,6 +61,7 @@ router.post('/', async (request, response, next) => {
             return response.status(404).json({ error: 'Conference not found' });
         }
 
+        // Cream articolul cu prima versiune in istoric
         const paper = await Paper.create({
             ...request.body,
             versionHistory: [{
@@ -75,17 +71,17 @@ router.post('/', async (request, response, next) => {
             }]
         });
 
-        // Auto-allocate 2 reviewers
+        // Alocam 2 revieweri random
         const reviewers = conference.reviewers;
         if (reviewers.length < 2) {
             return response.status(400).json({ error: 'Not enough reviewers allocated to conference' });
         }
 
-        // Select 2 random reviewers
+        // Amestecam si luam primii 2
         const shuffled = reviewers.sort(() => 0.5 - Math.random());
         const selectedReviewers = shuffled.slice(0, 2);
 
-        // Create review entries
+        // Cream recenziile initiale
         for (const reviewer of selectedReviewers) {
             await Review.create({
                 paperId: paper.id,
@@ -95,7 +91,7 @@ router.post('/', async (request, response, next) => {
             });
         }
 
-        // Update paper status
+        // Trecem in IN_REVIEW
         await paper.update({ status: 'IN_REVIEW' });
 
         const updatedPaper = await Paper.findByPk(paper.id, {
@@ -112,9 +108,7 @@ router.post('/', async (request, response, next) => {
     }
 });
 
-/**
- * PUT to update a paper.
- */
+// Modifica un articol
 router.put('/:id', async (request, response, next) => {
     try {
         const paper = await Paper.findByPk(request.params.id);
@@ -129,9 +123,7 @@ router.put('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * PUT to upload a new version of a paper.
- */
+// Incarca o versiune noua a articolului
 router.put('/:id/version', async (request, response, next) => {
     try {
         const { versionLink } = request.body;
@@ -141,7 +133,7 @@ router.put('/:id/version', async (request, response, next) => {
             return response.sendStatus(404);
         }
 
-        // Add to version history
+        // Adaugam in istoric
         const history = paper.versionHistory || [];
         const newVersion = {
             version: history.length + 1,
@@ -150,6 +142,7 @@ router.put('/:id/version', async (request, response, next) => {
         };
         history.push(newVersion);
 
+        // Actualizam si resetam la IN_REVIEW
         await paper.update({
             currentVersionLink: versionLink,
             versionHistory: history,
@@ -162,9 +155,7 @@ router.put('/:id/version', async (request, response, next) => {
     }
 });
 
-/**
- * DELETE a paper.
- */
+// Sterge un articol
 router.delete('/:id', async (request, response, next) => {
     try {
         const paper = await Paper.findByPk(request.params.id);
@@ -179,25 +170,21 @@ router.delete('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * POST to create or update a review for a paper.
- * Automatically updates paper status based on all reviews.
- */
+// Trimite sau actualizeaza un review
+// Updateaza automat statusul articolului
 router.post('/:id/reviews', async (request, response, next) => {
     try {
         const { reviewerId, verdict, comments } = request.body;
         const paperId = request.params.id;
 
-        // Check if review already exists
+        // Verificam daca exista deja review
         let review = await Review.findOne({
             where: { paperId, reviewerId }
         });
 
         if (review) {
-            // Update existing review
             await review.update({ verdict, comments });
         } else {
-            // Create new review
             review = await Review.create({
                 paperId,
                 reviewerId,
@@ -206,7 +193,7 @@ router.post('/:id/reviews', async (request, response, next) => {
             });
         }
 
-        // Update paper status based on reviews
+        // Actualizam statusul articolului pe baza review-urilor
         const paper = await Paper.findByPk(paperId, {
             include: [{ model: Review, as: 'reviews' }]
         });
@@ -216,6 +203,7 @@ router.post('/:id/reviews', async (request, response, next) => {
         const rejectedCount = allReviews.filter(r => r.verdict === 'rejected').length;
         const changesCount = allReviews.filter(r => r.verdict === 'changes_requested').length;
 
+        // Logica: rejected > toti approved > cereri de modificari
         if (rejectedCount > 0) {
             await paper.update({ status: 'REJECTED' });
         } else if (approvedCount === allReviews.length && allReviews.length >= 2) {

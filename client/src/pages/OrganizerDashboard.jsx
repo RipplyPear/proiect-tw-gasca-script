@@ -1,3 +1,6 @@
+// Dashboard-ul pentru organizatori (admini)
+// Permite: crearea conferintelor, alocarea reviewerilor,
+// monitorizarea articolelor si a statusurilor recenziilor
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUser } from "../services/auth";

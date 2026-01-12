@@ -1,8 +1,10 @@
+// Pagina de login - autentificare prin email
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginByEmail } from "../services/auth";
 
 export default function LoginPage() {
+  // Valoare default pentru testare rapida
   const [email, setEmail] = useState("author@conf.com");
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export default function LoginPage() {
     try {
       const user = await loginByEmail(email);
 
+      // Redirectionam catre dashboard-ul potrivit rolului
       const dest =
         user.role === "admin" ? "/organizer" : user.role === "reviewer" ? "/reviewer" : "/author";
       navigate(dest);

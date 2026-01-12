@@ -1,3 +1,4 @@
+// Routerul aplicatiei - defineste ce pagina se incarca pentru fiecare URL
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -14,11 +15,14 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* AppShell contine header-ul si wrapeaza toate paginile */}
         <Route element={<AppShell />}>
+          {/* Rute publice */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
+          {/* Dashboard organizator - doar admin */}
           <Route
             path="/organizer"
             element={
@@ -27,6 +31,7 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+          {/* Dashboard reviewer */}
           <Route
             path="/reviewer"
             element={
@@ -35,6 +40,7 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+          {/* Dashboard autor */}
           <Route
             path="/author"
             element={

@@ -1,11 +1,9 @@
-// Routes for conferences
+// Rutele pentru conferinte
 const express = require('express');
 const router = express.Router();
 const { User, Conference, Paper, Review } = require('../models');
 
-/**
- * GET all conferences from the database.
- */
+// Ia toate conferintele cu organizatorul si reviewerii
 router.get('/', async (request, response, next) => {
     try {
         const conferences = await Conference.findAll({
@@ -24,9 +22,7 @@ router.get('/', async (request, response, next) => {
     }
 });
 
-/**
- * GET a specific conference by id.
- */
+// Ia o conferinta dupa ID
 router.get('/:id', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id, {
@@ -45,19 +41,19 @@ router.get('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * POST a new conference to the database.
- * Only users with role 'admin' can create conferences.
- */
+// Creeaza o conferinta noua
+// Doar adminii pot crea conferinte
 router.post('/', async (request, response, next) => {
     try {
         const { organizerId } = request.body;
 
+        // Verificam ca organizatorul exista
         const organizer = await User.findByPk(organizerId);
         if (!organizer) {
             return response.status(404).json({ error: 'Organizer not found' });
         }
 
+        // Verificam ca e admin
         if (organizer.role !== 'admin') {
             return response.status(403).json({ error: 'Only admins can create conferences' });
         }
@@ -69,9 +65,7 @@ router.post('/', async (request, response, next) => {
     }
 });
 
-/**
- * PUT to update a conference.
- */
+// Modifica o conferinta
 router.put('/:id', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id);
@@ -86,9 +80,7 @@ router.put('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * DELETE a conference.
- */
+// Sterge o conferinta
 router.delete('/:id', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id);
@@ -103,19 +95,19 @@ router.delete('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * POST to allocate reviewers to a conference.
- */
+// Aloca revieweri la o conferinta
 router.post('/:id/reviewers', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id);
         if (conference) {
             const { reviewerIds } = request.body;
 
+            // Gasim userii dupa ID-uri
             const reviewers = await User.findAll({
                 where: { id: reviewerIds }
             });
 
+            // Verificam ca toti au rol de reviewer
             const allAreReviewers = reviewers.every(user => user.role === 'reviewer');
             if (!allAreReviewers) {
                 return response.status(400).json({ error: 'All users must have reviewer role' });
@@ -131,9 +123,7 @@ router.post('/:id/reviewers', async (request, response, next) => {
     }
 });
 
-/**
- * GET all papers for a conference (for organizer monitoring).
- */
+// Ia toate articolele din conferinta (pt monitorizare)
 router.get('/:id/papers', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id);
@@ -163,9 +153,7 @@ router.get('/:id/papers', async (request, response, next) => {
     }
 });
 
-/**
- * POST to register an author to a conference.
- */
+// Inregistreaza un autor la conferinta
 router.post('/:id/register', async (request, response, next) => {
     try {
         const conference = await Conference.findByPk(request.params.id);

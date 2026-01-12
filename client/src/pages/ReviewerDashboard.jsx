@@ -1,4 +1,6 @@
-//import { useMemo, useState } from "react";
+// Dashboard-ul pentru revieweri
+// Permite: vizualizarea articolelor alocate, trimiterea recenziilor
+// (approved/changes_requested/rejected) cu comentarii
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../components/StatusBanner";
 import { getErrorMessage } from "../utils/http";

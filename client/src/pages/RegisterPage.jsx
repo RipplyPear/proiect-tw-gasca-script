@@ -1,8 +1,10 @@
+// Pagina de inregistrare - creare cont nou
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../services/auth";
 
 export default function RegisterPage() {
+  // Valori default pentru testare rapida
   const [name, setName] = useState("New User");
   const [email, setEmail] = useState("newuser@conf.com");
   const [role, setRole] = useState("author");
@@ -14,7 +16,10 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      // Cream userul si facem login automat
       const user = await registerUser({ name, email, role });
+
+      // Redirectionam catre dashboard-ul potrivit
       const dest =
         user.role === "admin" ? "/organizer" : user.role === "reviewer" ? "/reviewer" : "/author";
       navigate(dest);
@@ -38,6 +43,7 @@ export default function RegisterPage() {
           <input value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
 
+        {/* Selector de rol */}
         <label>
           Rol
           <select value={role} onChange={(e) => setRole(e.target.value)}>

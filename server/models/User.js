@@ -1,6 +1,8 @@
+// Modelul pentru utilizatori
 const { DataTypes } = require('sequelize');
 const sequelize = require('../sequelize');
 
+// Fiecare user are un rol: admin (organizator), reviewer sau author
 const User = sequelize.define('User', {
     id: {
         type: DataTypes.INTEGER,
@@ -17,6 +19,7 @@ const User = sequelize.define('User', {
         unique: true,
         validate: { isEmail: true }
     },
+    // Rolul determina ce poate face userul in aplicatie
     role: {
         type: DataTypes.ENUM('admin', 'reviewer', 'author'),
         allowNull: false,

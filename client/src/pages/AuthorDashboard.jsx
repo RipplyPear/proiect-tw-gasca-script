@@ -1,4 +1,6 @@
-//import { useMemo, useState } from "react";
+// Dashboard-ul pentru autori
+// Permite: trimiterea articolelor, vizualizarea articolelor proprii,
+// incarcarea versiunilor noi (dupa ce primesti NEEDS_REVISIONS)
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../components/StatusBanner";
 import { getErrorMessage } from "../utils/http";
@@ -14,7 +16,7 @@ export default function AuthorDashboard() {
   const clearBanner = () => setBanner({ type: "info", message: "" });
   const showSuccess = (message) => setBanner({ type: "success", message });
   const showError = (err, fallback) =>
-  setBanner({ type: "error", message: getErrorMessage(err, fallback) });
+    setBanner({ type: "error", message: getErrorMessage(err, fallback) });
 
   // ---- state (submit form)
   const [conferenceId, setConferenceId] = useState(""); // useState(() => (conferences[0]?.id ? String(conferences[0].id) : ""));
@@ -72,7 +74,7 @@ export default function AuthorDashboard() {
   //   setTimeout(() => setConferenceId(String(conferences[0].id)), 0);
   // }
 
-// when conferences load, default conferenceId if empty
+  // when conferences load, default conferenceId if empty
   useEffect(() => {
     if (!conferenceId && conferences.length > 0) {
       setConferenceId(String(conferences[0].id));
@@ -147,8 +149,8 @@ export default function AuthorDashboard() {
             {isRegisteredHere
               ? "Registered"
               : registerMutation.isPending
-              ? "Registering..."
-              : "Register to conference"}
+                ? "Registering..."
+                : "Register to conference"}
           </button>
 
           <small>

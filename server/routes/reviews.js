@@ -1,11 +1,9 @@
-// Routes for reviews
+// Rutele pentru recenzii
 const express = require('express');
 const router = express.Router();
 const { User, Paper, Review } = require('../models');
 
-/**
- * GET all reviews from the database.
- */
+// Ia toate recenziile cu reviewer si articol
 router.get('/', async (request, response, next) => {
     try {
         const reviews = await Review.findAll({
@@ -24,9 +22,7 @@ router.get('/', async (request, response, next) => {
     }
 });
 
-/**
- * GET a specific review by id.
- */
+// Ia o recenzie dupa ID
 router.get('/:id', async (request, response, next) => {
     try {
         const review = await Review.findByPk(request.params.id, {
@@ -45,9 +41,7 @@ router.get('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * POST a new review to the database.
- */
+// Creeaza o recenzie noua
 router.post('/', async (request, response, next) => {
     try {
         const review = await Review.create(request.body);
@@ -57,9 +51,7 @@ router.post('/', async (request, response, next) => {
     }
 });
 
-/**
- * PUT to update a review.
- */
+// Modifica o recenzie
 router.put('/:id', async (request, response, next) => {
     try {
         const review = await Review.findByPk(request.params.id);
@@ -74,9 +66,7 @@ router.put('/:id', async (request, response, next) => {
     }
 });
 
-/**
- * DELETE a review.
- */
+// Sterge o recenzie
 router.delete('/:id', async (request, response, next) => {
     try {
         const review = await Review.findByPk(request.params.id);
