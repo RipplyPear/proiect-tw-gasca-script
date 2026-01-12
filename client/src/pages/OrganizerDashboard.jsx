@@ -14,18 +14,21 @@ export default function OrganizerDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
 
+  // State pentru banner-ul de notificari
   const [banner, setBanner] = useState({ type: "info", message: "" });
   const clearBanner = () => setBanner({ type: "info", message: "" });
   const showError = (e, fallback) =>
     setBanner({ type: "error", message: getErrorMessage(e, fallback) });
   const showSuccess = (msg) => setBanner({ type: "success", message: msg });
 
-  // ---------- Queries
+  // Query-uri pentru date initiale
+  // Lista conferintelor
   const conferencesQuery = useQuery({
     queryKey: ["conferences"],
     queryFn: ConferencesAPI.list,
   });
 
+  // Lista tuturor utilizatorilor (pentru a extrage reviewerii)
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: UsersAPI.list,
@@ -34,17 +37,19 @@ export default function OrganizerDashboard() {
   const conferences = Array.isArray(conferencesQuery.data) ? conferencesQuery.data : [];
   const allUsers = Array.isArray(usersQuery.data) ? usersQuery.data : [];
 
+  // Extragem doar utilizatorii cu rol de reviewer
   const reviewers = useMemo(
     () => allUsers.filter((u) => u.role === "reviewer"),
     [allUsers]
   );
 
-  // (recomandat) vezi doar conferințele organizatorului curent
+  // Filtram doar conferintele organizate de userul curent
   const myConferences = useMemo(() => {
     if (!user?.id) return conferences;
     return conferences.filter((c) => c.organizerId === user.id);
   }, [conferences, user]);
 
+  // Conferinta selectata pentru administrare
   const [selectedConferenceId, setSelectedConferenceId] = useState(null);
 
   // implicit: prima conferință (dacă există)
@@ -54,12 +59,14 @@ export default function OrganizerDashboard() {
     }
   }, [myConferences, selectedConferenceId]);
 
+  // Query pentru detaliile conferintei selectate (include reviewerii alocati)
   const conferenceDetailsQuery = useQuery({
     queryKey: ["conference", selectedConferenceId],
     queryFn: () => ConferencesAPI.get(selectedConferenceId),
     enabled: !!selectedConferenceId,
   });
 
+  // Query pentru articolele din conferinta selectata
   const papersQuery = useQuery({
     queryKey: ["conferencePapers", selectedConferenceId],
     queryFn: () => ConferencesAPI.papers(selectedConferenceId),
@@ -71,7 +78,7 @@ export default function OrganizerDashboard() {
     ? selectedConference.reviewers
     : [];
 
-  // ---------- Create conference state
+  // State pentru formularul de creare conferinta
   const [title, setTitle] = useState("New Conference");
   const [location, setLocation] = useState("București");
   const [date, setDate] = useState(() => {

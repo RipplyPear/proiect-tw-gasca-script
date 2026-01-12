@@ -12,6 +12,7 @@ import { PapersAPI } from "../services/papers";
 export default function ReviewerDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
+  // State pentru banner-ul de notificari (erori, succes)
   const [banner, setBanner] = useState({ type: "info", message: "" });
   const clearBanner = () => setBanner({ type: "info", message: "" });
   const showSuccess = (message) => setBanner({ type: "success", message });
@@ -19,19 +20,23 @@ export default function ReviewerDashboard() {
     setBanner({ type: "error", message: getErrorMessage(err, fallback) });
 
 
+  // Articolul selectat pentru vizualizare detalii si trimitere review
   const [selectedPaperId, setSelectedPaperId] = useState(null);
 
+  // Query pentru articolele alocate acestui reviewer
   const papersQuery = useQuery({
     queryKey: ["reviewerPapers", user?.id],
     queryFn: () => UsersAPI.papersForReviewer(user.id),
     enabled: !!user?.id,
   });
 
+  // Gasim articolul selectat in lista
   const selectedPaper = useMemo(() => {
     const arr = Array.isArray(papersQuery.data) ? papersQuery.data : [];
     return arr.find((p) => p.id === selectedPaperId) || null;
   }, [papersQuery.data, selectedPaperId]);
 
+  // Mutatie pentru trimiterea unui review
   const reviewMutation = useMutation({
     mutationFn: ({ paperId, verdict, comments }) =>
       PapersAPI.review(paperId, { reviewerId: user.id, verdict, comments }),
@@ -49,6 +54,7 @@ export default function ReviewerDashboard() {
     },
   });
 
+  // Query pentru detaliile complete ale articolului selectat
   const paperDetailsQuery = useQuery({
     queryKey: ["paper", selectedPaperId],
     queryFn: () => PapersAPI.get(selectedPaperId),

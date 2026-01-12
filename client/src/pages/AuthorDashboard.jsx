@@ -12,24 +12,27 @@ import { ConferencesAPI } from "../services/conferences";
 export default function AuthorDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
+  // State pentru banner-ul de notificari (erori, succes)
   const [banner, setBanner] = useState({ type: "info", message: "" });
   const clearBanner = () => setBanner({ type: "info", message: "" });
   const showSuccess = (message) => setBanner({ type: "success", message });
   const showError = (err, fallback) =>
     setBanner({ type: "error", message: getErrorMessage(err, fallback) });
 
-  // ---- state (submit form)
+  // State pentru formularul de trimitere articol
   const [conferenceId, setConferenceId] = useState(""); // useState(() => (conferences[0]?.id ? String(conferences[0].id) : ""));
   const [title, setTitle] = useState("My Paper Title");
   const [abstract, setAbstract] = useState("Short abstract...");
   const [currentVersionLink, setCurrentVersionLink] = useState("v1.pdf");
 
+  // Tinem evidenta conferintelor la care s-a inregistrat autorul
   const [registeredConferenceIds, setRegisteredConferenceIds] = useState(() => new Set());
 
   const isRegisteredHere = conferenceId
     ? registeredConferenceIds.has(Number(conferenceId))
     : false;
 
+  // Mutatie pentru inregistrarea autorului la conferinta
   const registerMutation = useMutation({
     mutationFn: async () => {
       clearBanner();
@@ -50,20 +53,22 @@ export default function AuthorDashboard() {
   });
 
 
-  // ---- queries
+  // Query pentru lista de conferinte disponibile
   const conferencesQuery = useQuery({
     queryKey: ["conferences"],
     queryFn: ConferencesAPI.list,
   });
 
+  // Query pentru lista de articole
   const papersQuery = useQuery({
     queryKey: ["papers"],
     queryFn: PapersAPI.list,
   });
 
-  // ---- derived
+  // Procesam datele din query-uri
   const conferences = Array.isArray(conferencesQuery.data) ? conferencesQuery.data : [];
   const allPapers = Array.isArray(papersQuery.data) ? papersQuery.data : [];
+  // Filtram doar articolele autorului curent
   const myPapers = useMemo(() => allPapers.filter((p) => p.authorId === user?.id), [allPapers, user]);
 
 
@@ -81,6 +86,7 @@ export default function AuthorDashboard() {
     }
   }, [conferenceId, conferences]);
 
+  // Mutatie pentru trimiterea unui articol nou
   const submitMutation = useMutation({
     mutationFn: () =>
       PapersAPI.submit({
@@ -101,9 +107,10 @@ export default function AuthorDashboard() {
     },
   });
 
-  // ---- details + version upload
+  // State pentru articolul selectat (pentru detalii si upload versiune noua)
   const [selectedPaperId, setSelectedPaperId] = useState(null);
 
+  // Query pentru detaliile articolului selectat
   const paperDetailsQuery = useQuery({
     queryKey: ["paper", selectedPaperId],
     queryFn: () => PapersAPI.get(selectedPaperId),
@@ -112,6 +119,7 @@ export default function AuthorDashboard() {
 
   const [newVersionLink, setNewVersionLink] = useState("v2.pdf");
 
+  // Mutatie pentru incarcarea unei versiuni noi a articolului
   const newVersionMutation = useMutation({
     mutationFn: () => PapersAPI.newVersion(selectedPaperId, newVersionLink),
     onSuccess: async () => {
