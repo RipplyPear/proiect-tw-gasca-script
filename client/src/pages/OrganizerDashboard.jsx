@@ -8,7 +8,6 @@ import { ConferencesAPI } from "../services/conferences";
 import { UsersAPI } from "../services/users";
 import StatusBanner from "../components/StatusBanner";
 import { getErrorMessage } from "../utils/http";
-import { card, grid2, field } from "../ui/styles";
 
 export default function OrganizerDashboard() {
   const user = getCurrentUser();
@@ -22,13 +21,11 @@ export default function OrganizerDashboard() {
   const showSuccess = (msg) => setBanner({ type: "success", message: msg });
 
   // Query-uri pentru date initiale
-  // Lista conferintelor
   const conferencesQuery = useQuery({
     queryKey: ["conferences"],
     queryFn: ConferencesAPI.list,
   });
 
-  // Lista tuturor utilizatorilor (pentru a extrage reviewerii)
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: UsersAPI.list,
@@ -52,14 +49,13 @@ export default function OrganizerDashboard() {
   // Conferinta selectata pentru administrare
   const [selectedConferenceId, setSelectedConferenceId] = useState(null);
 
-  // implicit: prima conferință (dacă există)
   useEffect(() => {
     if (!selectedConferenceId && myConferences.length > 0) {
       setSelectedConferenceId(String(myConferences[0].id));
     }
   }, [myConferences, selectedConferenceId]);
 
-  // Query pentru detaliile conferintei selectate (include reviewerii alocati)
+  // Query pentru detaliile conferintei selectate
   const conferenceDetailsQuery = useQuery({
     queryKey: ["conference", selectedConferenceId],
     queryFn: () => ConferencesAPI.get(selectedConferenceId),
@@ -107,30 +103,25 @@ export default function OrganizerDashboard() {
       });
     },
     onSuccess: async () => {
-      showSuccess("Conferință creată.");
+      showSuccess("Conferință creată cu succes!");
       await qc.invalidateQueries({ queryKey: ["conferences"] });
-
-      // selectează “cea mai nouă” conferință a organizatorului
       const fresh = await ConferencesAPI.list();
       const list = Array.isArray(fresh) ? fresh : [];
       const mine = user?.id ? list.filter((c) => c.organizerId === user.id) : list;
       const newest = mine.reduce((acc, c) => (!acc || c.id > acc.id ? c : acc), null);
-
       if (newest) setSelectedConferenceId(String(newest.id));
     },
     onError: (e) => showError(e, "Eroare la creare conferință."),
   });
 
-  // ---------- Assign reviewers state
+  // State pentru assign reviewers
   const [selectedReviewerIds, setSelectedReviewerIds] = useState([]);
   const [reviewerFilter, setReviewerFilter] = useState("");
 
-  // pre-bifează alocații existenți
   useEffect(() => {
     if (!selectedConferenceId) return;
     const ids = assignedReviewers.map((r) => r.id);
     setSelectedReviewerIds(ids);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConferenceId, conferenceDetailsQuery.data]);
 
   const assignReviewersMutation = useMutation({
@@ -138,7 +129,7 @@ export default function OrganizerDashboard() {
       clearBanner();
       if (!selectedConferenceId) throw new Error("Selectează o conferință.");
       if (selectedReviewerIds.length < 2)
-        throw new Error("Selectează minim 2 revieweri (recomandat pentru submit papers).");
+        throw new Error("Selectează minim 2 revieweri.");
 
       return ConferencesAPI.assignReviewers(
         selectedConferenceId,
@@ -146,7 +137,7 @@ export default function OrganizerDashboard() {
       );
     },
     onSuccess: async () => {
-      showSuccess("Revieweri salvați.");
+      showSuccess("Revieweri salvați cu succes!");
       await qc.invalidateQueries({ queryKey: ["conference", selectedConferenceId] });
     },
     onError: (e) => showError(e, "Eroare la alocare revieweri."),
@@ -169,11 +160,9 @@ export default function OrganizerDashboard() {
 
   const papers = Array.isArray(papersQuery.data) ? papersQuery.data : [];
 
-  // ---------- Guards
   if (!user) return null;
 
-  const isLoadingTop =
-    conferencesQuery.isLoading || usersQuery.isLoading;
+  const isLoadingTop = conferencesQuery.isLoading || usersQuery.isLoading;
 
   const canCreate =
     !createConferenceMutation.isPending &&
@@ -187,200 +176,233 @@ export default function OrganizerDashboard() {
     selectedReviewerIds.length >= 2;
 
   return (
-    <div>
-      <h2>Organizer dashboard</h2>
+    <div className="fade-in">
+      {/* Page Header */}
+      <div className="page-header">
+        <h1 className="page-title">Organizator Dashboard</h1>
+        <p className="page-subtitle">Gestionează conferințele și reviewerii</p>
+      </div>
 
-      <StatusBanner
-        type={banner.type}
-        message={banner.message}
-        onClose={clearBanner}
-      />
+      <StatusBanner type={banner.type} message={banner.message} onClose={clearBanner} />
 
-      {isLoadingTop && <p>Loading...</p>}
-      {(conferencesQuery.error || usersQuery.error) && (
-        <p style={{ color: "crimson" }}>
-          Eroare la încărcarea datelor inițiale (conferințe/users).
-        </p>
+      {isLoadingTop && (
+        <div className="loading" style={{ marginBottom: "1rem" }}>
+          <span className="spinner"></span>
+          <span>Se încarcă datele...</span>
+        </div>
       )}
 
-      <div style={grid2}>
-        {/* LEFT */}
-        <div style={card}>
-          <h3>Conferințe</h3>
+      <div className="dashboard-grid">
+        {/* LEFT COLUMN */}
+        <div style={{ display: "grid", gap: "1.5rem" }}>
+          {/* Conferences Section */}
+          <div className="dashboard-section">
+            <h3 className="dashboard-section-title">Conferințele Mele</h3>
 
-          {myConferences.length === 0 ? (
-            <p>(Nu ai conferințe încă. Creează una mai jos.)</p>
-          ) : (
-            <label style={field}>
-              Selectează conferință
-              <select
-                value={selectedConferenceId || ""}
-                onChange={(e) => setSelectedConferenceId(e.target.value)}
-                disabled={myConferences.length === 0}
+            {myConferences.length === 0 ? (
+              <p style={{ color: "var(--text-muted)" }}>Nu ai conferințe încă. Creează una mai jos.</p>
+            ) : (
+              <div className="form-group">
+                <label>Selectează conferință</label>
+                <select
+                  value={selectedConferenceId || ""}
+                  onChange={(e) => setSelectedConferenceId(e.target.value)}
+                >
+                  {myConferences.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      #{c.id} — {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="section-divider"></div>
+
+            <h4 style={{ marginBottom: "1rem", color: "var(--text-primary)" }}>Creează conferință nouă</h4>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Titlu</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Numele conferinței"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Locație</label>
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="București"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Data</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+
+              <button
+                onClick={() => createConferenceMutation.mutate()}
+                disabled={!canCreate}
               >
-                {myConferences.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    #{c.id} — {c.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <hr style={{ margin: "16px 0" }} />
-
-          <h3>Creează conferință</h3>
-          <div style={{ display: "grid", gap: 10 }}>
-            <label style={field}>
-              Title
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Conference title"
-              />
-            </label>
-
-            <label style={field}>
-              Location
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="București"
-              />
-            </label>
-
-            <label style={field}>
-              Date
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-
-            <button
-              onClick={() => createConferenceMutation.mutate()}
-              disabled={!canCreate}
-            >
-              {createConferenceMutation.isPending ? "Creating..." : "Create conference"}
-            </button>
+                {createConferenceMutation.isPending ? (
+                  <>
+                    <span className="spinner"></span>
+                    Se creează...
+                  </>
+                ) : (
+                  "Creează conferință"
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* RIGHT */}
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={card}>
-            <h3>Alocare revieweri</h3>
+        {/* RIGHT COLUMN */}
+        <div style={{ display: "grid", gap: "1.5rem" }}>
+          {/* Reviewers Section */}
+          <div className="dashboard-section">
+            <h3 className="dashboard-section-title">Alocă Revieweri</h3>
 
-            {!selectedConferenceId && <p>Selectează o conferință.</p>}
-
-            {selectedConferenceId && conferenceDetailsQuery.isLoading && (
-              <p>Loading conference details...</p>
+            {!selectedConferenceId && (
+              <p style={{ color: "var(--text-muted)" }}>Selectează o conferință din stânga.</p>
             )}
 
-            {selectedConferenceId && conferenceDetailsQuery.error && (
-              <p style={{ color: "crimson" }}>Eroare la încărcare detalii conferință.</p>
+            {selectedConferenceId && conferenceDetailsQuery.isLoading && (
+              <div className="loading">
+                <span className="spinner"></span>
+                <span>Se încarcă...</span>
+              </div>
             )}
 
             {selectedConferenceId && selectedConference && (
               <>
-                <p style={{ marginTop: 0 }}>
-                  <strong>{selectedConference.title}</strong> — {selectedConference.location} —{" "}
-                  {String(selectedConference.date)}
-                </p>
+                <div className="glass-card-static" style={{ marginBottom: "1rem", padding: "1rem" }}>
+                  <strong style={{ color: "var(--text-primary)" }}>{selectedConference.title}</strong>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    {selectedConference.location} •  {String(selectedConference.date)}
+                  </div>
+                </div>
 
                 {reviewers.length === 0 ? (
-                  <p>(Nu există utilizatori cu rol reviewer.)</p>
+                  <p style={{ color: "var(--text-muted)" }}>Nu există utilizatori cu rol reviewer.</p>
                 ) : (
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <label style={field}>
-                      Caută reviewer
+                  <>
+                    <div className="form-group">
+                      <label>Caută reviewer</label>
                       <input
                         value={reviewerFilter}
                         onChange={(e) => setReviewerFilter(e.target.value)}
-                        placeholder="name/email/id..."
+                        placeholder="Nume, email sau ID..."
                       />
-                    </label>
+                    </div>
 
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
                       <button
                         type="button"
+                        className="btn-secondary btn-sm"
                         onClick={() => setSelectedReviewerIds(reviewers.map((r) => r.id))}
                       >
-                        Select all
+                        Selectează tot
                       </button>
-                      <button type="button" onClick={() => setSelectedReviewerIds([])}>
-                        Clear
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        onClick={() => setSelectedReviewerIds([])}
+                      >
+                        Resetează
                       </button>
                     </div>
 
-                    <div style={{ display: "grid", gap: 6 }}>
+                    <div className="reviewer-list">
                       {filteredReviewers.map((r) => (
-                        <label
-                          key={r.id}
-                          style={{ display: "flex", gap: 8, alignItems: "center" }}
-                        >
+                        <label key={r.id} className="reviewer-item">
                           <input
                             type="checkbox"
                             checked={selectedReviewerIds.includes(r.id)}
                             onChange={() => toggleReviewer(r.id)}
                           />
-                          <span>
-                            #{r.id} — {r.name} ({r.email})
-                          </span>
+                          <div>
+                            <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>
+                              {r.name}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                              {r.email}
+                            </div>
+                          </div>
                         </label>
                       ))}
-                      {filteredReviewers.length === 0 && <p>(Niciun reviewer găsit.)</p>}
+                      {filteredReviewers.length === 0 && (
+                        <p style={{ color: "var(--text-muted)" }}>Niciun reviewer găsit.</p>
+                      )}
                     </div>
 
                     <button
                       onClick={() => assignReviewersMutation.mutate()}
                       disabled={!canSaveReviewers}
-                      title={
-                        selectedReviewerIds.length < 2
-                          ? "Selectează minim 2 revieweri."
-                          : ""
-                      }
+                      style={{ marginTop: "1rem", width: "100%" }}
                     >
-                      {assignReviewersMutation.isPending ? "Saving..." : "Save reviewers"}
+                      {assignReviewersMutation.isPending ? (
+                        <>
+                          <span className="spinner"></span>
+                          Se salvează...
+                        </>
+                      ) : (
+                        `Salvează revieweri (${selectedReviewerIds.length})`
+                      )}
                     </button>
 
-                    <div>
-                      <h4 style={{ marginBottom: 8 }}>Alocați acum</h4>
-                      {assignedReviewers.length === 0 ? (
-                        <p>(Niciun reviewer alocat)</p>
-                      ) : (
-                        <ul style={{ marginTop: 0 }}>
+                    {assignedReviewers.length > 0 && (
+                      <div style={{ marginTop: "1rem" }}>
+                        <h4 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+                          Alocați curent:
+                        </h4>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                           {assignedReviewers.map((r) => (
-                            <li key={r.id}>
-                              #{r.id} — {r.name}
-                            </li>
+                            <span key={r.id} className="badge badge-info">
+                              {r.name}
+                            </span>
                           ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
           </div>
 
-          <div style={card}>
-            <h3>Monitorizare articole (conferință)</h3>
+          {/* Papers Monitoring */}
+          <div className="dashboard-section">
+            <h3 className="dashboard-section-title">Monitorizare Articole</h3>
 
-            {!selectedConferenceId && <p>Selectează o conferință.</p>}
+            {!selectedConferenceId && (
+              <p style={{ color: "var(--text-muted)" }}>Selectează o conferință.</p>
+            )}
 
-            {selectedConferenceId && papersQuery.isLoading && <p>Loading papers...</p>}
-            {selectedConferenceId && papersQuery.error && (
-              <p style={{ color: "crimson" }}>Eroare la încărcare papers.</p>
+            {selectedConferenceId && papersQuery.isLoading && (
+              <div className="loading">
+                <span className="spinner"></span>
+                <span>Se încarcă...</span>
+              </div>
             )}
 
             {selectedConferenceId && !papersQuery.isLoading && papers.length === 0 && (
-              <p>(Niciun articol pentru conferința selectată)</p>
+              <div className="empty-state" style={{ padding: "2rem" }}>
+
+                <p style={{ color: "var(--text-muted)", margin: 0 }}>Niciun articol pentru această conferință.</p>
+              </div>
             )}
 
             {papers.length > 0 && (
-              <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ display: "grid", gap: "1rem" }}>
                 {papers.map((p) => (
                   <PaperMonitorCard key={p.id} paper={p} />
                 ))}
@@ -396,47 +418,63 @@ export default function OrganizerDashboard() {
 function PaperMonitorCard({ paper }) {
   const reviews = Array.isArray(paper?.reviews) ? paper.reviews : [];
 
+  // Status badge color
+  const statusConfig = {
+    IN_REVIEW: { class: "badge-warning", label: "În recenzie" },
+    APPROVED: { class: "badge-success", label: "Aprobat" },
+    REJECTED: { class: "badge-error", label: "Respins" },
+    NEEDS_REVISIONS: { class: "badge-info", label: "Necesită revizuiri" },
+  };
+
+  const status = statusConfig[paper.status] || { class: "badge-neutral", label: paper.status };
+
   return (
-    <div style={{ border: "1px solid #ccc", padding: 12, borderRadius: 8 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <strong>
-          #{paper.id} — {paper.title}
-        </strong>
-        <span>
-          <strong>Status:</strong> {paper.status}
-        </span>
+    <div className="glass-card-static" style={{ padding: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.25rem" }}>
+            #{paper.id} — {paper.title}
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+            {paper.author?.name || `Author ID: ${paper.authorId}`}
+          </div>
+        </div>
+        <span className={`badge ${status.class}`}>{status.label}</span>
       </div>
 
-      <div style={{ marginTop: 6 }}>
-        <div>
-          <strong>Author:</strong> {paper.author?.name || `authorId=${paper.authorId}`}
-        </div>
-        <div>
-          <strong>Versiune curentă:</strong> {paper.currentVersionLink}
-        </div>
-        <div style={{ marginTop: 6 }}>{paper.abstract}</div>
+      <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", margin: "0.75rem 0" }}>
+        {paper.abstract}
+      </p>
+
+      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+        Versiune: {paper.currentVersionLink}
       </div>
 
-      <div style={{ marginTop: 10 }}>
-        <strong>Reviews ({reviews.length}):</strong>
+      <div>
+        <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+          Reviews ({reviews.length}):
+        </div>
         {reviews.length === 0 ? (
-          <div>(no reviews)</div>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", margin: 0 }}>Fără recenzii încă.</p>
         ) : (
-          <ul style={{ marginTop: 6 }}>
+          <div style={{ display: "grid", gap: "0.5rem" }}>
             {reviews.map((r) => (
-              <li key={r.id}>
-                <strong>{r.reviewer?.name || `reviewerId=${r.reviewerId}`}</strong>:{" "}
-                {r.verdict} — {r.comments || "(no comments)"}
-              </li>
+              <div key={r.id} style={{ fontSize: "0.875rem", padding: "0.5rem", background: "var(--bg-tertiary)", borderRadius: "8px" }}>
+                <strong style={{ color: "var(--text-primary)" }}>
+                  {r.reviewer?.name || `Reviewer #${r.reviewerId}`}
+                </strong>
+                {" — "}
+                <span style={{ color: r.verdict === "approved" ? "var(--color-success)" : r.verdict === "rejected" ? "var(--color-error)" : "var(--color-warning)" }}>
+                  {r.verdict || "pending"}
+                </span>
+                {r.comments && (
+                  <div style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                    "{r.comments}"
+                  </div>
+                )}
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>

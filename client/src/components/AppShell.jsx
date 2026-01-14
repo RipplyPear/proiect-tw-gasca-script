@@ -13,32 +13,44 @@ export default function AppShell() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
+    <div>
       {/* Header cu navigare */}
-      <header style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
-        <Link to="/">Home</Link>
+      <header className="app-header">
+        <div className="header-content">
+          {/* Logo */}
+          <Link to="/" className="logo">
+            <span className="logo-icon">C</span>
+            <span>ConferenceHub</span>
+          </Link>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-          {user ? (
-            // Daca e logat, aratam numele si buton de logout
-            <>
-              <span>
-                {user.name} ({user.role})
-              </span>
-              <button onClick={handleLogout}>Logout</button>
-            </>
-          ) : (
-            // Daca nu e logat, link-uri catre login si register
-            <>
-              <Link to="/login">Login</Link>
-              <Link to="/register">Register</Link>
-            </>
-          )}
+          {/* Right side - user info sau login links */}
+          <div className="user-info">
+            {user ? (
+              <>
+                <div className="user-badge">
+                  <span>{user.name}</span>
+                  <span className="user-role">{user.role}</span>
+                </div>
+                <button onClick={handleLogout} className="btn-ghost btn-sm">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <div className="nav-links">
+                <Link to="/login" className="nav-link">Login</Link>
+                <Link to="/register">
+                  <button className="btn-sm">Register</button>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Outlet randeaza pagina curenta (copilul rutei) */}
-      <Outlet />
+      {/* Main content area */}
+      <main className="container page-wrapper">
+        <Outlet />
+      </main>
     </div>
   );
 }

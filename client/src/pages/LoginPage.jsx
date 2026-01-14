@@ -7,11 +7,13 @@ export default function LoginPage() {
   // Valoare default pentru testare rapida
   const [email, setEmail] = useState("author@conf.com");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
       const user = await loginByEmail(email);
@@ -22,24 +24,60 @@ export default function LoginPage() {
       navigate(dest);
     } catch (err) {
       setError(err?.message || "Eroare la login");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 8, maxWidth: 360 }}>
-        <label>
-          Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <button type="submit">Login</button>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-      </form>
+    <div className="auth-container">
+      <div className="auth-card fade-in">
+        {/* Header */}
+        <div className="auth-header">
 
-      <p>
-        Nu ai cont? <Link to="/register">Register</Link>
-      </p>
+          <h1 className="auth-title">Bine ai revenit!</h1>
+          <p className="auth-subtitle">
+            Introdu email-ul pentru a te autentifica
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={onSubmit} className="form-grid">
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="exemplu@email.com"
+              required
+            />
+          </div>
+
+          <button type="submit" className="btn-lg" disabled={loading} style={{ width: "100%" }}>
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Se autentifică...
+              </>
+            ) : (
+              "Autentificare"
+            )}
+          </button>
+
+          {error && (
+            <div className="alert alert-error" style={{ marginTop: "1rem" }}>
+              <div className="alert-content">{error}</div>
+            </div>
+          )}
+        </form>
+
+        {/* Footer */}
+        <div className="auth-footer">
+          Nu ai cont? <Link to="/register">Creează unul acum</Link>
+        </div>
+      </div>
     </div>
   );
 }

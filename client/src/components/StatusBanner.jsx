@@ -4,34 +4,31 @@ export default function StatusBanner({ type = "info", message, onClose }) {
   // Daca nu avem mesaj, nu afisam nimic
   if (!message) return null;
 
-  const styles = {
-    padding: 10,
-    borderRadius: 8,
-    border: "1px solid #ddd",
-    marginBottom: 12,
-    color: "#111"
-  };
+  // Mapare tip -> clasa CSS
+  const typeClass = {
+    error: "alert-error",
+    success: "alert-success",
+    warning: "alert-warning",
+    info: "alert-info"
+  }[type] || "alert-info";
 
-  // Culoare de fundal in functie de tip
-  const bg =
-    type === "error" ? "#ffecec" :
-      type === "success" ? "#ecfff1" :
-        "#eef6ff"; // info
+
 
   return (
-    <div style={{ ...styles, background: bg }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div><strong>{type.toUpperCase()}:</strong> {message}</div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: "transparent", color: "#111", border: "1px solid #ccc" }}
-          >
-            X
-          </button>
-        )}
+    <div className={`alert ${typeClass}`}>
+      <div className="alert-content">
+        <strong style={{ textTransform: "capitalize" }}>{type}:</strong> {message}
       </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="alert-close"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 }

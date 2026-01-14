@@ -12,13 +12,13 @@ import { PapersAPI } from "../services/papers";
 export default function ReviewerDashboard() {
   const user = getCurrentUser();
   const qc = useQueryClient();
-  // State pentru banner-ul de notificari (erori, succes)
+
+  // State pentru banner-ul de notificari
   const [banner, setBanner] = useState({ type: "info", message: "" });
   const clearBanner = () => setBanner({ type: "info", message: "" });
   const showSuccess = (message) => setBanner({ type: "success", message });
   const showError = (err, fallback) =>
     setBanner({ type: "error", message: getErrorMessage(err, fallback) });
-
 
   // Articolul selectat pentru vizualizare detalii si trimitere review
   const [selectedPaperId, setSelectedPaperId] = useState(null);
@@ -45,11 +45,9 @@ export default function ReviewerDashboard() {
       if (selectedPaperId) {
         await qc.invalidateQueries({ queryKey: ["paper", selectedPaperId] });
       }
-      //alert("Review trimis.");
-      showSuccess("Review trimis.");
+      showSuccess("Review trimis cu succes!");
     },
     onError: (e) => {
-      //alert(e?.response?.data?.message || "Eroare la trimiterea review-ului.");
       showError(e, "Eroare la trimiterea review-ului.");
     },
   });
@@ -65,43 +63,87 @@ export default function ReviewerDashboard() {
 
   const papers = Array.isArray(papersQuery.data) ? papersQuery.data : [];
 
+  // Status badge config
+  const statusConfig = {
+    IN_REVIEW: { class: "badge-warning", label: "În recenzie" },
+    APPROVED: { class: "badge-success", label: "Aprobat" },
+    REJECTED: { class: "badge-error", label: "Respins" },
+    NEEDS_REVISIONS: { class: "badge-info", label: "Necesită revizuiri" },
+  };
+
   return (
-    <div>
-      <h2>Reviewer dashboard</h2>
+    <div className="fade-in">
+      {/* Page Header */}
+      <div className="page-header">
+        <h1 className="page-title">Reviewer Dashboard</h1>
+        <p className="page-subtitle">Recenzează articolele alocate</p>
+      </div>
+
       <StatusBanner type={banner.type} message={banner.message} onClose={clearBanner} />
 
-      {papersQuery.isLoading && <p>Loading...</p>}
-      {papersQuery.error && <p style={{ color: "crimson" }}>Eroare la încărcare.</p>}
+      {papersQuery.isLoading && (
+        <div className="loading" style={{ marginBottom: "1rem" }}>
+          <span className="spinner"></span>
+          <span>Se încarcă articolele...</span>
+        </div>
+      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div>
-          <h3>Articole alocate</h3>
-          {papers.length === 0 ? (
-            <p>Niciun articol alocat.</p>
-          ) : (
-            <ul>
-              {papers.map((p) => (
-                <li key={p.id}>
-                  <button
+      <div className="dashboard-grid">
+        {/* Papers List */}
+        <div className="dashboard-section">
+          <h3 className="dashboard-section-title">Articole Alocate</h3>
+
+          {!papersQuery.isLoading && papers.length === 0 && (
+            <div className="empty-state" style={{ padding: "2rem" }}>
+
+              <p style={{ color: "var(--text-muted)", margin: 0 }}>Niciun articol alocat.</p>
+            </div>
+          )}
+
+          {papers.length > 0 && (
+            <div style={{ display: "grid", gap: "0.75rem" }}>
+              {papers.map((p) => {
+                const status = statusConfig[p.status] || { class: "badge-neutral", label: p.status };
+                const isActive = selectedPaperId === p.id;
+
+                return (
+                  <div
+                    key={p.id}
                     onClick={() => setSelectedPaperId(p.id)}
-                    style={{
-                      fontWeight: p.id === selectedPaperId ? "bold" : "normal",
-                      cursor: "pointer",
-                    }}
+                    className={`paper-card ${isActive ? "active" : ""}`}
                   >
-                    #{p.id} — {p.title} ({p.status})
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <div className="paper-title" style={{ fontSize: "1rem" }}>
+                        #{p.id} — {p.title}
+                      </div>
+                      <span className={`badge ${status.class}`}>{status.label}</span>
+                    </div>
+                    {p.author?.name && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                        {p.author.name}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div>
-          <h3>Detalii articol</h3>
-          {!selectedPaperId && <p>Selectează un articol.</p>}
+        {/* Paper Details & Review Form */}
+        <div className="dashboard-section">
+          <h3 className="dashboard-section-title">Detalii & Recenzie</h3>
 
-          {selectedPaperId && paperDetailsQuery.isLoading && <p>Loading details...</p>}
+          {!selectedPaperId && (
+            <p style={{ color: "var(--text-muted)" }}>Selectează un articol din listă.</p>
+          )}
+
+          {selectedPaperId && paperDetailsQuery.isLoading && (
+            <div className="loading">
+              <span className="spinner"></span>
+              <span>Se încarcă...</span>
+            </div>
+          )}
 
           {selectedPaperId && paperDetailsQuery.data && (
             <PaperReviewPanel
@@ -111,6 +153,7 @@ export default function ReviewerDashboard() {
                 reviewMutation.mutate({ paperId: selectedPaperId, verdict, comments })
               }
               submitting={reviewMutation.isPending}
+              statusConfig={statusConfig}
             />
           )}
         </div>
@@ -119,8 +162,7 @@ export default function ReviewerDashboard() {
   );
 }
 
-//function PaperReviewPanel({ paper, onSubmit, submitting }) {
-function PaperReviewPanel({ paper, reviewerId, onSubmit, submitting }) {
+function PaperReviewPanel({ paper, reviewerId, onSubmit, submitting, statusConfig }) {
   const [verdict, setVerdict] = useState("approved");
   const [comments, setComments] = useState("");
 
@@ -136,53 +178,115 @@ function PaperReviewPanel({ paper, reviewerId, onSubmit, submitting }) {
     }
   }, [paper?.id, reviewerId]);
 
+  const status = statusConfig[paper.status] || { class: "badge-neutral", label: paper.status };
+
+  // Verdict options with colors
+  const verdictOptions = [
+    { value: "approved", label: "✅ Aprobat", color: "var(--color-success)" },
+    { value: "changes_requested", label: "🔄 Necesită modificări", color: "var(--color-warning)" },
+    { value: "rejected", label: "❌ Respins", color: "var(--color-error)" },
+  ];
+
   return (
-    <div style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8 }}>
-      <p>
-        <strong>{paper.title}</strong>
-      </p>
-      <p>{paper.abstract}</p>
-      <p>
-        <strong>Status:</strong> {paper.status}
-      </p>
-      <p>
-        <strong>Versiune curentă:</strong> {paper.currentVersionLink}
-      </p>
+    <div>
+      {/* Paper Info */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem", gap: "1rem", flexWrap: "wrap" }}>
+          <h4 style={{ color: "var(--text-primary)", margin: 0 }}>{paper.title}</h4>
+          <span className={`badge ${status.class}`}>{status.label}</span>
+        </div>
 
-      <h4>Trimite review</h4>
-      <div style={{ display: "grid", gap: 8 }}>
-        <select value={verdict} onChange={(e) => setVerdict(e.target.value)}>
-          <option value="approved">approved</option>
-          <option value="changes_requested">changes_requested</option>
-          <option value="rejected">rejected</option>
-        </select>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+          {paper.abstract}
+        </p>
 
-        <textarea
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          placeholder="Comments"
-          rows={4}
-        />
+        <div style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
+          Versiune curentă: <strong style={{ color: "var(--text-primary)" }}>{paper.currentVersionLink}</strong>
+        </div>
+      </div>
+
+      <div className="section-divider"></div>
+
+      {/* Review Form */}
+      <h5 style={{ color: "var(--text-primary)", marginBottom: "1rem" }}>Trimite Recenzie</h5>
+
+      <div className="form-grid" style={{ maxWidth: "400px" }}>
+        <div className="form-group">
+          <label>Verdict</label>
+          <select value={verdict} onChange={(e) => setVerdict(e.target.value)}>
+            {verdictOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label.replace(/^[^\w]+/, '')}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Comentarii</label>
+          <textarea
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+            placeholder="Scrie feedback-ul tău aici..."
+            rows={4}
+          />
+        </div>
 
         <button onClick={() => onSubmit(verdict, comments)} disabled={submitting}>
-          {submitting ? "Sending..." : "Send review"}
+          {submitting ? (
+            <>
+              <span className="spinner"></span>
+              Se trimite...
+            </>
+          ) : (
+            "Trimite recenzie"
+          )}
         </button>
       </div>
 
-      {/* {Array.isArray(paper.Reviews) && ( */}
-      {Array.isArray(paper.reviews) && (
+      {/* Existing Reviews */}
+      {Array.isArray(paper.reviews) && paper.reviews.length > 0 && (
         <>
-          <h4 style={{ marginTop: 16 }}>Reviews existente</h4>
-          <ul>
-            {/* {paper.Reviews.map((r) => ( */}
-            {paper.reviews.map((r) => (
-              <li key={r.id}>
-                {/* reviewerId={r.reviewerId} — verdict={r.verdict || "(pending)"} — {r.comments || ""} */}
-                <strong>{r.reviewer?.name || `reviewerId=${r.reviewerId}`}</strong>
-                {" — "} verdict={r.verdict || "(pending)"} — {r.comments || ""}
-              </li>
-            ))}
-          </ul>
+          <div className="section-divider"></div>
+          <h5 style={{ color: "var(--text-primary)", marginBottom: "0.75rem" }}>
+            Recenzii existente ({paper.reviews.length})
+          </h5>
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {paper.reviews.map((r) => {
+              const isMyReview = r.reviewerId === reviewerId;
+
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    padding: "0.75rem",
+                    background: isMyReview ? "rgba(139, 92, 246, 0.1)" : "var(--bg-tertiary)",
+                    borderRadius: "8px",
+                    border: isMyReview ? "1px solid var(--color-primary)" : "1px solid transparent"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <strong style={{ color: "var(--text-primary)" }}>
+                        {r.reviewer?.name || `Reviewer #${r.reviewerId}`}
+                      </strong>
+                      {isMyReview && (
+                        <span className="badge badge-info" style={{ fontSize: "0.65rem" }}>Tu</span>
+                      )}
+                    </div>
+                    <span className={`badge ${r.verdict === "approved" ? "badge-success" : r.verdict === "rejected" ? "badge-error" : "badge-warning"}`}>
+                      {r.verdict || "pending"}
+                    </span>
+                  </div>
+                  {r.comments && (
+                    <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", margin: 0, fontStyle: "italic" }}>
+                      "{r.comments}"
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
     </div>

@@ -124,37 +124,232 @@ curl http://localhost:3000/api/papers/1
 
 ---
 
-## Exemple Utilizare
+## Exemple Postman - Toate Endpoint-urile
 
-**Organizator - Creare conferință:**
-```bash
-POST /api/conferences
-{"title": "Tech 2024", "location": "București", "date": "2024-06-15", "organizerId": 2}
+> **Server URL:** `http://localhost:3000`  
+> **În Postman:** Body → raw → JSON
+
+---
+
+### 📁 UTILIZATORI `/api/users`
+
+**GET - Vezi toți utilizatorii:**
+```
+GET http://localhost:3000/api/users
+Body: niciunul
 ```
 
-**Organizator - Alocare revieweri:**
-```bash
-POST /api/conferences/1/reviewers
-{"reviewerIds": [3, 4, 5]}
+**GET - Vezi utilizator specific:**
+```
+GET http://localhost:3000/api/users/1
+Body: niciunul
 ```
 
-**Autor - Trimitere articol:**
-```bash
-POST /api/papers
-{"title": "Titlu", "abstract": "...", "currentVersionLink": "v1.pdf", "authorId": 6, "conferenceId": 1}
+**POST - Creează utilizator:**
+```
+POST http://localhost:3000/api/users
+```
+```json
+{
+  "name": "Ion Popescu",
+  "email": "ion@example.com",
+  "role": "author"
+}
+```
+> Roluri posibile: `admin`, `reviewer`, `author`
+
+**PUT - Actualizează utilizator:**
+```
+PUT http://localhost:3000/api/users/1
+```
+```json
+{
+  "name": "Ion Popescu Modificat",
+  "email": "ion_nou@example.com",
+  "role": "reviewer"
+}
 ```
 
-**Reviewer - Trimitere review:**
-```bash
-POST /api/papers/1/reviews
-{"reviewerId": 3, "verdict": "approved", "comments": "Excelent"}
+**DELETE - Șterge utilizator:**
+```
+DELETE http://localhost:3000/api/users/1
+Body: niciunul
 ```
 
-**Autor - Versiune nouă:**
-```bash
-PUT /api/papers/1/version
-{"versionLink": "v2.pdf"}
+**GET - Articole alocate reviewer-ului:**
 ```
+GET http://localhost:3000/api/users/3/papers
+Body: niciunul
+```
+
+---
+
+### 📁 CONFERINȚE `/api/conferences`
+
+**GET - Vezi toate conferințele:**
+```
+GET http://localhost:3000/api/conferences
+Body: niciunul
+```
+
+**GET - Vezi conferință specifică:**
+```
+GET http://localhost:3000/api/conferences/1
+Body: niciunul
+```
+
+**POST - Creează conferință (doar admin):**
+```
+POST http://localhost:3000/api/conferences
+```
+```json
+{
+  "title": "Tech Conference 2024",
+  "location": "București",
+  "date": "2024-06-15",
+  "organizerId": 2
+}
+```
+
+**POST - Alocă revieweri la conferință:**
+```
+POST http://localhost:3000/api/conferences/1/reviewers
+```
+```json
+{
+  "reviewerIds": [3, 4, 5]
+}
+```
+
+**GET - Articole conferință (monitorizare):**
+```
+GET http://localhost:3000/api/conferences/1/papers
+Body: niciunul
+```
+
+**POST - Înregistrare autor la conferință:**
+```
+POST http://localhost:3000/api/conferences/1/register
+```
+```json
+{
+  "userId": 6
+}
+```
+
+---
+
+### 📁 ARTICOLE `/api/papers`
+
+**GET - Vezi toate articolele:**
+```
+GET http://localhost:3000/api/papers
+Body: niciunul
+```
+
+**GET - Vezi articol specific (cu reviews):**
+```
+GET http://localhost:3000/api/papers/1
+Body: niciunul
+```
+
+**POST - Trimite articol (alocă auto 2 revieweri):**
+```
+POST http://localhost:3000/api/papers
+```
+```json
+{
+  "title": "Machine Learning în IoT",
+  "abstract": "Acest articol analizează aplicațiile ML în dispozitivele IoT...",
+  "currentVersionLink": "paper_v1.pdf",
+  "authorId": 6,
+  "conferenceId": 1
+}
+```
+
+**PUT - Actualizează articol:**
+```
+PUT http://localhost:3000/api/papers/1
+```
+```json
+{
+  "title": "Titlu Nou",
+  "abstract": "Abstract modificat..."
+}
+```
+
+**PUT - Încarcă versiune nouă:**
+```
+PUT http://localhost:3000/api/papers/1/version
+```
+```json
+{
+  "versionLink": "paper_v2.pdf"
+}
+```
+
+**DELETE - Șterge articol:**
+```
+DELETE http://localhost:3000/api/papers/1
+Body: niciunul
+```
+
+**POST - Trimite review (update auto status):**
+```
+POST http://localhost:3000/api/papers/1/reviews
+```
+```json
+{
+  "reviewerId": 3,
+  "verdict": "approved",
+  "comments": "Articol bine structurat și documentat!"
+}
+```
+> Verdict posibil: `approved`, `changes_requested`, `rejected`
+
+---
+
+### 📁 REVIEWS `/api/reviews`
+
+**GET - Vezi toate review-urile:**
+```
+GET http://localhost:3000/api/reviews
+Body: niciunul
+```
+
+**GET - Vezi review specific:**
+```
+GET http://localhost:3000/api/reviews/1
+Body: niciunul
+```
+
+**PUT - Actualizează review:**
+```
+PUT http://localhost:3000/api/reviews/1
+```
+```json
+{
+  "verdict": "changes_requested",
+  "comments": "Necesită revizuiri la secțiunea 3"
+}
+```
+
+**DELETE - Șterge review:**
+```
+DELETE http://localhost:3000/api/reviews/1
+Body: niciunul
+```
+
+---
+
+## Flow Testare Complet
+
+1. **Creează utilizatori** (admin, revieweri, autor)
+2. **Admin creează conferință** cu `organizerId`
+3. **Admin alocă revieweri** la conferință
+4. **Autor trimite articol** → se alocă auto 2 revieweri
+5. **Reviewerii trimit review-uri** → status se actualizează auto
+6. **Dacă needs_revisions** → autor încarcă versiune nouă
 
 ---
 
